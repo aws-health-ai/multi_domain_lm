@@ -8,12 +8,14 @@ In this repo we provide instructions to pre-train using Fairseq RoBERTa (v0.8.0)
 
 If you find the paper or code useful, please cite our paper: 
 ```
-@inproceedings{arumae2020calm,
-  title={An Empirical Investigation Towards Efficient Multi-Domain Language Model Pre-training},
-  author={Arumae, Kristjan, Sun, Qing and Bhatia, Parminder},
-  booktitle={Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing},
-  publisher = "Association for Computational Linguistics",
-  year={2020}}
+@misc{arumae2020empirical,
+      title={An Empirical Investigation Towards Efficient Multi-Domain Language Model Pre-training}, 
+      author={Kristjan Arumae and Qing Sun and Parminder Bhatia},
+      year={2020},
+      eprint={2010.00784},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL}
+}
 ```
 
 ## Pre-training with Mitigation
@@ -79,9 +81,52 @@ fairseq-train  $DATA_DIR \
 	       --use_ulmfit --decay_rate_lrc $RHO
 ```
 
+## Fine-tuning
+
+Here we provide a sample fine-tuning script to be used with Fairseq (v0.8.0), not this repo.  This is on [BioASQ](http://www.bioasq.org/) task 7b.  In our paper we treated this task as a binary classification following [BLURB](https://arxiv.org/abs/2007.15779).
+
+The pre-training scripts will generate a `checkpoint_best.pt` file, and this is likely most useful to load under `ROBERTA_PATH`.
+
+```bash
+TOTAL_NUM_UPDATES=3020  # 10 epochs through BioASQ for bsz 32
+WARMUP_UPDATES=300
+LR=1e-05
+HEAD_NAME=bioasq_head
+NUM_CLASSES=2 # QA treated as a binary classification task
+MAX_SENTENCES=8
+ROBERTA_PATH=/save/checkpoint/path/model.pt
+SAVE_PATH=/save/finetune/checkpoint/path
+DATA_PATH=/data/path/
+
+fairseq-train $DATA_PATH \
+		    --restore-file $ROBERTA_PATH \
+		    --max-positions 512 \
+		    --max-sentences $MAX_SENTENCES \
+		    --max-tokens 4400 \
+		    --task sentence_prediction \
+		    --reset-optimizer --reset-dataloader --reset-meters \
+		    --required-batch-size-multiple 1 \
+		    --init-token 0 --separator-token 2 \
+		    --arch roberta_base \
+		    --criterion sentence_prediction \
+		    --classification-head-name $HEAD_NAME \
+		    --num-classes $NUM_CLASSES \
+		    --dropout 0.1 --attention-dropout 0.1 \
+		    --weight-decay 0.1 --optimizer adam --adam-betas "(0.9, 0.98)" --adam-eps 1e-06 \
+		    --clip-norm 0.0 \
+		    --lr-scheduler polynomial_decay --lr $LR --total-num-update $TOTAL_NUM_UPDATES --warmup-updates $WARMUP_UPDATES \
+		    --fp16 --fp16-init-scale 4 --threshold-loss-scale 1 --fp16-scale-window 128 \
+		    --max-epoch 10 \
+		    --best-checkpoint-metric accuracy --maximize-best-checkpoint-metric \
+		    --shorten-method "truncate" \
+		    --find-unused-parameters \
+		    --update-freq 4 --save-dir $SAVE_PATH
+```
+
+
 ## Notes
 
-Be sure to use `--reset-dataloader --reset-lr-scheduler --reset-optimizer --reset-optimizer` when appropriate.
+Be sure to use `--reset-dataloader --reset-lr-scheduler --reset-optimizer` when appropriate.
 
 For experience replay in our paper we do not use this package, but the built in data source mixing for Fairseq:  
 ```bash
