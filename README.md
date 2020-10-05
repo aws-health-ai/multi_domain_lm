@@ -4,6 +4,8 @@
 
 This repository accompanies our work on catastrophic forgetting mitigation for large scale language model pre-training.  The work appears in the proceedings of the 2020 EMNLP main conference.
 
+https://arxiv.org/pdf/2010.00784.pdf
+
 In this repo we provide instructions to pre-train using Fairseq RoBERTa (v0.8.0).  Specifically this provides support forlearning rate control (LRC), and elastic weight consolidation (EWC) as described in our paper.
 
 If you find the paper or code useful, please cite our paper: 
